@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "profile-card",
+    "slug": "profile-card",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "scheme": "myapp",
+    "navigation": {
+      "enable": false
+    }
+  }
+}
