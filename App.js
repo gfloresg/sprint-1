@@ -1,6 +1,7 @@
-// TASK 2 � Interactive Profile Card
+// TASK 3 — Modals, ScrollView and SafeAreaView
 import { useState } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, Platform, Pressable, Button, Alert, TextInput } from 'react-native';
+import { View, Text, Image, Pressable, TextInput, Button, Alert, ScrollView, StyleSheet, Platform, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const COLORS = {
   background: '#EEF1F6',
@@ -21,6 +22,26 @@ const SKILLS = ['React Native', 'JavaScript', 'UI Design', 'Git', 'Flexbox'];
 const BASE_FOLLOWERS = 1200;
 const MAX_MESSAGE = 140;
 
+const PROJECTS = [
+  { name: 'Weather App', tech: 'React Native', stars: 128 },
+  { name: 'Task Tracker', tech: 'Expo', stars: 96 },
+  { name: 'Photo Gallery', tech: 'Expo Camera', stars: 74 },
+  { name: 'Recipe Book', tech: 'FlatList', stars: 61 },
+  { name: 'Chat UI', tech: 'Flexbox', stars: 45 },
+];
+
+const CONTACTS = [
+  'Ana López',
+  'Ben Carter',
+  'Carla Ruiz',
+  'David Kim',
+  'Elena Petrova',
+  'Farid Hassan',
+  'Grace Liu',
+  'Hugo Silva',
+];
+
+// Adds thousands separators: 1200 -> '1,200'
 function formatCount(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
@@ -32,8 +53,12 @@ export default function App() {
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [selectedSkills, setSelectedSkills] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState([]);
 
   const followers = BASE_FOLLOWERS + (isFollowing ? 1 : 0);
+  const isSendDisabled = message.trim().length === 0;
+  const isShareDisabled = selectedContacts.length === 0;
   const stats = [
     { label: 'Projects', value: '24' },
     { label: 'Followers', value: formatCount(followers) },
@@ -48,30 +73,43 @@ export default function App() {
     setIsComposerOpen(!isComposerOpen);
   };
 
-  const handleSharePress = () => {
-    Alert.alert('Share profile', 'Profile link copied to clipboard');
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedContacts([]);
+  };
+
+  const handleContactPress = (name) => {
+    setSelectedContacts(
+      selectedContacts.includes(name)
+        ? selectedContacts.filter((item) => item !== name)
+        : [...selectedContacts, name]
+    );
+  };
+
+  const handleConfirmShare = () => {
+    Alert.alert('Profile shared', `Sent to: ${selectedContacts.join(', ')}`);
+    closeModal();
   };
 
   const handleSendPress = () => {
-    const trimmed = message.trim();
-    if (trimmed.length === 0) return;
-    Alert.alert('Message sent', trimmed);
+    Alert.alert('Message sent', `To Alex: "${message.trim()}"`);
     setMessage('');
     setIsComposerOpen(false);
   };
 
-  const toggleSkill = (skill) => {
-    if (selectedSkills.includes(skill)) {
-      setSelectedSkills(selectedSkills.filter((s) => s !== skill));
-    } else {
-      setSelectedSkills([...selectedSkills, skill]);
-    }
+  const handleSkillPress = (skill) => {
+    // Never modify the array directly: create a new one.
+    setSelectedSkills(
+      selectedSkills.includes(skill)
+        ? selectedSkills.filter((item) => item !== skill)
+        : [...selectedSkills, skill]
+    );
   };
 
-  const isSendDisabled = message.trim().length === 0;
 
   return (
-    <ScrollView
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.screenContent}
       keyboardShouldPersistTaps="handled"
@@ -120,8 +158,12 @@ export default function App() {
               return (
                 <Pressable
                   key={skill}
-                  onPress={() => toggleSkill(skill)}
-                  style={[styles.tag, isSelected && styles.tagSelected]}
+                  onPress={() => handleSkillPress(skill)}
+                  style={({ pressed }) => [
+                    styles.tag,
+                    isSelected && styles.tagSelected,
+                    pressed && styles.pressed,
+                  ]}
                 >
                   <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>
                     {skill}
@@ -130,7 +172,24 @@ export default function App() {
               );
             })}
           </View>
-          <Text style={styles.hint}>Tap a skill to select it � {selectedSkills.length} selected</Text>
+          <Text style={styles.hint}>
+            Tap a skill to select it · {selectedSkills.length} selected
+          </Text>
+
+          <Text style={styles.sectionTitle}>RECENT PROJECTS</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.projectsRow}
+          >
+            {PROJECTS.map((project) => (
+              <View key={project.name} style={styles.projectCard}>
+                <Text style={styles.projectName}>{project.name}</Text>
+                <Text style={styles.projectTech}>{project.tech}</Text>
+                <Text style={styles.projectStars}>★ {project.stars}</Text>
+              </View>
+            ))}
+          </ScrollView>
 
           <View style={styles.actions}>
             <Pressable
@@ -141,7 +200,7 @@ export default function App() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.buttonText, isFollowing ? styles.buttonText : styles.buttonTextPrimary]}>
+              <Text style={[styles.buttonText, !isFollowing && styles.buttonTextPrimary]}>
                 {isFollowing ? 'Following' : 'Follow'}
               </Text>
             </Pressable>
@@ -157,24 +216,23 @@ export default function App() {
             <View style={styles.composer}>
               <TextInput
                 style={styles.input}
+                placeholder="Write a message to Alex"
+                placeholderTextColor={COLORS.muted}
                 value={message}
                 onChangeText={(newText) => setMessage(newText)}
                 maxLength={MAX_MESSAGE}
-                placeholder="Write your message..."
-                placeholderTextColor={COLORS.muted}
-                multiline
               />
               <View style={styles.composerFooter}>
                 <Text style={styles.counter}>
                   {message.length}/{MAX_MESSAGE} characters
                 </Text>
                 <Pressable
-                  onPress={handleSendPress}
                   disabled={isSendDisabled}
+                  onPress={handleSendPress}
                   style={({ pressed }) => [
                     styles.sendButton,
                     isSendDisabled && styles.sendButtonDisabled,
-                    pressed && !isSendDisabled && styles.pressed,
+                    pressed && styles.pressed,
                   ]}
                 >
                   <Text style={styles.sendText}>Send</Text>
@@ -183,12 +241,68 @@ export default function App() {
             </View>
           )}
 
+
           <View style={styles.shareWrapper}>
-            <Button title="Share profile" color={COLORS.primary} onPress={handleSharePress} />
+            <Button title="Share profile" color={COLORS.primary} onPress={() => setModalVisible(true)} />
           </View>
         </View>
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.overlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Share profile</Text>
+            <Text style={styles.sheetText}>Choose who gets Alex's profile.</Text>
+
+            <ScrollView style={styles.contactList}>
+              {CONTACTS.map((name) => {
+                const isSelected = selectedContacts.includes(name);
+                return (
+                  <Pressable
+                    key={name}
+                    onPress={() => handleContactPress(name)}
+                    style={({ pressed }) => [styles.contactRow, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.contactName}>{name}</Text>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected && <Text style={styles.checkMark}>✓</Text>}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Pressable
+              disabled={isShareDisabled}
+              onPress={handleConfirmShare}
+              style={({ pressed }) => [
+                styles.shareButton,
+                isShareDisabled && styles.shareButtonDisabled,
+                pressed && !isShareDisabled && styles.pressed,
+              ]}
+            >
+              <Text style={styles.shareButtonText}>
+                {isShareDisabled ? 'Select contacts' : `Share with ${selectedContacts.length}`}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={closeModal}
+              style={({ pressed }) => [styles.sheetClose, pressed && styles.pressed]}
+            >
+              <Text style={styles.sheetCloseText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -254,6 +368,9 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: COLORS.card,
   },
+  offlineBadge: {
+    backgroundColor: COLORS.offline,
+  },
   headerText: {
     flex: 1,
     marginLeft: 14,
@@ -280,6 +397,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: COLORS.text,
+  },
+  link: {
+    marginTop: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -324,6 +447,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.primary,
   },
+  tagSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  tagTextSelected: {
+    color: '#FFFFFF',
+  },
+  hint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: COLORS.muted,
+  },
   actions: {
     flexDirection: 'row',
     gap: 12,
@@ -351,23 +485,11 @@ const styles = StyleSheet.create({
   buttonTextPrimary: {
     color: '#FFFFFF',
   },
+  pressed: {
+    opacity: 0.6,
+  },
   composer: {
     marginTop: 16,
-  },
-  composerFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  counter: {
-    fontSize: 12,
-    color: COLORS.muted,
-  },
-  hint: {
-    marginTop: 8,
-    fontSize: 12,
-    color: COLORS.muted,
   },
   input: {
     height: 44,
@@ -378,17 +500,15 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
   },
-  link: {
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
+  composerFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
-  offlineBadge: {
-    backgroundColor: COLORS.offline,
-  },
-  pressed: {
-    opacity: 0.6,
+  counter: {
+    fontSize: 12,
+    color: COLORS.muted,
   },
   sendButton: {
     paddingHorizontal: 20,
@@ -408,10 +528,28 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignItems: 'center',
   },
-  tagSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  tagTextSelected: {
-    color: '#FFFFFF',
-  },
+
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  sheet: { width: '100%', maxWidth: 420, padding: 20, borderRadius: 20, backgroundColor: COLORS.card },
+  sheetTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text },
+  sheetText: { marginTop: 4, marginBottom: 12, fontSize: 14, color: COLORS.muted },
+  sheetClose: { marginTop: 8, paddingVertical: 10, alignItems: 'center' },
+  sheetCloseText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
+  sectionTitle: { marginTop: 18, marginBottom: 10, fontSize: 12, fontWeight: '700', letterSpacing: 0.5, color: COLORS.muted },
+  projectsRow: { gap: 12, paddingRight: 4 },
+  projectCard: { width: 140, padding: 14, borderRadius: 14, backgroundColor: COLORS.primaryLight },
+  projectName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  projectTech: { marginTop: 4, fontSize: 12, color: COLORS.muted },
+  projectStars: { marginTop: 12, fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  contactList: { maxHeight: 240, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.border },
+  contactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+  contactName: { fontSize: 15, color: COLORS.text },
+  checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: COLORS.offline, alignItems: 'center', justifyContent: 'center' },
+  checkboxSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
+  checkMark: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  shareButton: { marginTop: 16, paddingVertical: 12, borderRadius: 12, alignItems: 'center', backgroundColor: COLORS.primary },
+  shareButtonDisabled: { backgroundColor: COLORS.offline },
+  shareButtonText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+
 });
