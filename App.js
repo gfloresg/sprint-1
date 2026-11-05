@@ -1,7 +1,7 @@
 // TASK 3 — Modals, ScrollView and SafeAreaView
 import { useState } from 'react';
 import { View, Text, Image, Pressable, TextInput, Button, Alert, ScrollView, StyleSheet, Platform, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const COLORS = {
   background: '#EEF1F6',
@@ -108,8 +108,9 @@ export default function App() {
 
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.screenContent}
       keyboardShouldPersistTaps="handled"
@@ -301,8 +302,9 @@ export default function App() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
